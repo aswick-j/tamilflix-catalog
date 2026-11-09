@@ -16,12 +16,16 @@ const TMDB = "https://api.themoviedb.org/3";
 const MDBLIST = "https://api.mdblist.com";
 const IMG = "https://image.tmdb.org/t/p/w500";
 const BACKDROP = "https://image.tmdb.org/t/p/w1280";
+let tmdbAuthFailed = false;
 
 await fs.rm(OUT, { recursive: true, force: true });
 await fs.mkdir(OUT, { recursive: true });
 await fs.copyFile(path.join(ROOT, "manifest.json"), path.join(OUT, "manifest.json"));
 
 async function tmdb(endpoint) {
+  if (!TOKEN) throw new Error("Missing TMDB_READ_ACCESS_TOKEN GitHub Actions secret.");
+  if (tmdbAuthFailed) throw new Error("TMDB requests skipped because authentication already failed.");
+
   const url = new URL(TMDB + endpoint);
   const headers = { accept: "application/json" };
 
@@ -38,6 +42,7 @@ async function tmdb(endpoint) {
   const response = await fetch(url, { headers });
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 300);
+    if (response.status === 401 || response.status === 403) tmdbAuthFailed = true;
     throw new Error("TMDB " + response.status + " for " + endpoint + ": " + detail);
   }
   return response.json();
@@ -160,7 +165,7 @@ const imdbIdCache = new Map();
 function getImdbId(item, type) {
   const mediaType = type === "movie" ? "movie" : "tv";
   const itemId = numericId(item.id);
-  if (!itemId) return Promise.resolve(null);
+  if (!itemId || tmdbAuthFailed) return Promise.resolve(null);
 
   const cacheKey = mediaType + ":" + itemId;
   if (!imdbIdCache.has(cacheKey)) {
@@ -286,12 +291,21 @@ async function discover(kind, params, pages) {
   return all;
 }
 
+async function discoverOrEmpty(kind, params, pages, catalogLabel) {
+  try {
+    return await discover(kind, params, pages);
+  } catch (error) {
+    console.warn("TMDB source unavailable for " + catalogLabel + ": " + error.message);
+    return [];
+  }
+}
+
 const today = new Date().toISOString().slice(0, 10);
-const discoveredTamilMovies = await discover("movie", {
+const mdblistTamilMovies = await fetchMdblistMovies(MDBLIST_USER, MDBLIST_SLUG, "Tamil Movies Digital");
+const discoveredTamilMovies = await discoverOrEmpty("movie", {
   with_original_language: "ta",
   sort_by: "popularity.desc"
-}, 3);
-const mdblistTamilMovies = await fetchMdblistMovies(MDBLIST_USER, MDBLIST_SLUG, "Tamil Movies Digital");
+}, 3, "Tamil Movies");
 const mergedTamilMovies = mergeCatalogItems(mdblistTamilMovies, discoveredTamilMovies);
 
 const oneYearAgo = new Date();
@@ -302,12 +316,12 @@ const mdblistLatestTamilMovies = await fetchMdblistMovies(
   MDBLIST_LATEST_SLUG,
   "Latest Tamil Movie Release"
 );
-const tmdbLatestTamilMovies = await discover("movie", {
+const tmdbLatestTamilMovies = await discoverOrEmpty("movie", {
   with_original_language: "ta",
   sort_by: "primary_release_date.desc",
   "primary_release_date.gte": releaseWindowStart,
   "primary_release_date.lte": today
-}, 5);
+}, 5, "Latest Tamil Releases");
 
 function releaseDateOf(item) {
   const value = item.release_date || item.released || "";
@@ -341,10 +355,10 @@ console.log(
 
 const catalogDefs = [
   { id: "tamil_movies", type: "movie", items: mergedTamilMovies },
-  { id: "tamil_popular_movies", type: "movie", items: await discover("movie", { with_original_language: "ta", sort_by: "vote_count.desc", "vote_count.gte": 10 }, 2) },
+  { id: "tamil_popular_movies", type: "movie", items: await discoverOrEmpty("movie", { with_original_language: "ta", sort_by: "vote_count.desc", "vote_count.gte": 10 }, 2, "Popular Tamil Movies") },
   { id: "tamil_latest_movies", type: "movie", items: mergedLatestTamilMovies },
-  { id: "tamil_series", type: "series", items: await discover("tv", { with_original_language: "ta", sort_by: "popularity.desc" }, 3) },
-  { id: "tamil_popular_series", type: "series", items: await discover("tv", { with_original_language: "ta", sort_by: "vote_count.desc", "vote_count.gte": 10 }, 2) }
+  { id: "tamil_series", type: "series", items: await discoverOrEmpty("tv", { with_original_language: "ta", sort_by: "popularity.desc" }, 3, "Tamil Series") },
+  { id: "tamil_popular_series", type: "series", items: await discoverOrEmpty("tv", { with_original_language: "ta", sort_by: "vote_count.desc", "vote_count.gte": 10 }, 2, "Popular Tamil Series") }
 ];
 
 const dubbed = JSON.parse(await fs.readFile(path.join(ROOT, "data/tamil-dubbed.json"), "utf8"));
