@@ -6,54 +6,52 @@ A static, catalog-only Stremio-protocol addon intended for compatible clients su
 
 ## Features
 
-- Tamil-original movies and series discovered from TMDB
-- Popular and recent Tamil movie catalogs
-- Popular Tamil series
+- Tamil movies combining the MDBList **Tamil Movies Digital** community list and TMDB Tamil-language discovery
+- Popular and recent Tamil movie catalogs from TMDB
+- Popular Tamil series from TMDB
 - Manually curated Tamil-dubbed movies and series using TMDB IDs
 - Tamil live-TV channel directory
-- IMDb IDs where available, with TMDB ID fallback to avoid omitting titles
+- IMDb IDs where available, with TMDB ID fallback so titles are not discarded
 - Static JSON endpoints; no runtime server, database, or VPS
 - GitHub Actions refreshes the generated catalog daily
+
+## Catalog sources
+
+The main **Tamil Movies** catalog merges the public MDBList list [Tamil Movies Digital](https://mdblist.com/lists/abinan97/tamil-movies-digital) with TMDB's Tamil-original-language discovery results. MDBList items are kept in the curator's order, and duplicate titles are merged by TMDB ID (or IMDb ID if TMDB ID is unavailable). TMDB discovery fills gaps and adds metadata.
+
+The build reads the MDBList list by username and slug and follows its pagination headers. It does not publish your MDBList API key.
 
 ## Playback and ID compatibility
 
 TamilFlix is a catalog and metadata addon, not a stream provider. To play movies or series, install and enable a compatible stream provider in Nuvio.
 
-Catalog IDs prefer IMDb IDs (for example, `tt1234567`) because many Stremio providers use them. When TMDB has no IMDb mapping, TamilFlix keeps the title using its TMDB ID format (for example, `tmdb:12345`) rather than dropping it. MediaFusion's published ElfHosted manifest has advertised both `tt` and `tmdb:` stream ID prefixes; other providers may support different ID formats. Playback still depends on the provider's content coverage and configuration.
+Catalog IDs prefer IMDb IDs (for example, \`tt1234567\`) because many Stremio providers use them. When TMDB has no IMDb mapping, TamilFlix keeps the title using its TMDB ID format (for example, \`tmdb:12345\`) rather than dropping it. MediaFusion's published ElfHosted manifest has advertised both \`tt\` and \`tmdb:\` stream ID prefixes; other providers may support different ID formats. Playback still depends on the provider's content coverage and configuration.
 
 The live-TV catalog is a channel directory only. It does not contain channel stream URLs and cannot play live channels.
 
-## Important limitations
+## Required GitHub Actions secrets
 
-1. TMDB's original-language filter identifies titles tagged with Tamil as their original language; it does not guarantee every Tamil-language film is present or correctly classified.
-2. TMDB does not reliably identify every dubbed audio track. Add only titles you have verified are available with Tamil audio to `data/tamil-dubbed.json`.
-3. A TMDB API Read Access Token is required for catalog generation. It is used only by GitHub Actions and is not published in generated files.
+In this repository, open **Settings → Environments → dev → Environment secrets** and add:
 
-## Setup
+- \`TMDB_READ_ACCESS_TOKEN\` — your TMDB API Read Access Token
+- \`MDBLIST_API_KEY\` — your MDBList API key from [MDBList Preferences](https://mdblist.com/preferences)
 
-### 1. Add your TMDB API token
+Do not paste either key into source code, commit it, or send it in chat. The MDBList key is optional during the build: without it, the workflow falls back to TMDB discovery and logs that MDBList was skipped.
 
-Create a TMDB account and generate an **API Read Access Token** in your account's API settings.
+MDBList's free API tier currently allows 1,000 API requests per day. TamilFlix fetches the list in pages, so a normal build uses only a small number of MDBList requests.
 
-In this repository, open **Settings → Secrets and variables → Actions** and create a repository secret named:
-
-`TMDB_READ_ACCESS_TOKEN`
-
-Paste the TMDB API Read Access Token as its value. Do not put the token in source code or commit it.
-
-### 2. Enable GitHub Pages
+## Enable GitHub Pages
 
 1. Open **Settings → Pages**.
 2. Under **Build and deployment**, select **GitHub Actions**.
-3. Add the `TMDB_READ_ACCESS_TOKEN` secret before running the workflow.
-4. Open **Actions → Build TamilFlix catalog → Run workflow**.
-5. Wait for the workflow to finish successfully.
+3. Open **Actions → Build TamilFlix catalog → Run workflow**.
+4. Wait for the workflow to finish successfully.
 
 The manifest URL for this repository is:
 
-`https://aswick-j.github.io/tamilflix-catalog/manifest.json`
+\`https://aswick-j.github.io/tamilflix-catalog/manifest.json\`
 
-### 3. Install in Nuvio
+## Install in Nuvio
 
 1. Open the manifest URL in a browser and verify it returns JSON.
 2. In Nuvio, open **Settings → Addons** (or **Addons → Add Addon**, depending on app version).
@@ -63,22 +61,22 @@ The manifest URL for this repository is:
 
 ## Add Tamil-dubbed titles
 
-Edit `data/tamil-dubbed.json`:
+Edit \`data/tamil-dubbed.json\`:
 
-```json
+\`\`\`json
 {
   "movies": [12345, 67890],
   "series": [24680]
 }
-```
+\`\`\`
 
 Replace the example numbers with actual TMDB movie and TV IDs after verifying each title has Tamil audio. These example IDs are placeholders. Commit the change and run the workflow again.
 
 ## Add live-TV directory entries
 
-Edit `data/live-tv.json`:
+Edit \`data/live-tv.json\`:
 
-```json
+\`\`\`json
 [
   {
     "id": "your-channel-id",
@@ -88,7 +86,7 @@ Edit `data/live-tv.json`:
     "website": "https://official-channel-website.example"
   }
 ]
-```
+\`\`\`
 
 Use official/authorized logos and links only. The website is informational, not a stream URL. Verify current channel branding, status, and official websites before publishing the directory. Commit and rerun the workflow.
 
@@ -99,11 +97,12 @@ The GitHub Actions workflow runs daily and can also be started manually. After e
 ## Troubleshooting
 
 - **Titles appear but no streams:** Install and enable a compatible stream provider in Nuvio. TamilFlix itself has no stream endpoint.
-- **TMDB-fallback title has no stream:** Check whether your provider supports `tmdb:` IDs. MediaFusion's ElfHosted manifest has advertised support, but provider coverage may differ.
+- **A title has no stream:** Check whether your provider supports that title's IMDb or TMDB ID and whether it has a matching source.
+- **MDBList source skipped:** Add the \`MDBLIST_API_KEY\` secret to the \`dev\` environment and rerun the workflow.
 - **404 on manifest:** Check Pages is enabled with GitHub Actions and the workflow completed successfully.
-- **Build fails:** Check the Actions log for a missing/invalid `TMDB_READ_ACCESS_TOKEN` or TMDB API errors.
-- **Dubbed catalogs empty:** Add verified TMDB IDs to `data/tamil-dubbed.json`.
+- **Build fails:** Check the Actions log for an invalid secret, MDBList API error, or TMDB API error.
+- **Dubbed catalogs empty:** Add verified TMDB IDs to \`data/tamil-dubbed.json\`.
 
 ## License and attribution
 
-TMDB data and images are subject to TMDB's terms and attribution requirements. This product uses the TMDB API but is not endorsed or certified by TMDB. Review TMDB's current branding and attribution requirements before public use.
+MDBList data is retrieved through its API and remains subject to MDBList's terms. TMDB data and images are subject to TMDB's terms and attribution requirements. TamilFlix is not endorsed or certified by MDBList or TMDB.
