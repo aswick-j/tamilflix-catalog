@@ -18,15 +18,60 @@ async function tmdb(endpoint) {
   const response = await fetch(`${TMDB}${endpoint}`, {
     headers: { Authorization: `Bearer ${TOKEN}`, accept: "application/json" }
   });
-  if (!response.ok) throw new Error(`TMDB ${response.status} for ${endpoint}: ${(await response.text()).slice(0, 300)}`);
+  if (!response.ok) {
+    throw new Error(`TMDB ${response.status} for ${endpoint}: ${(await response.text()).slice(0, 300)}`);
+  }
   return response.json();
 }
 
-function toMeta(item, type) {
+// Resolve TMDB IDs to IMDb IDs so separately installed Stremio/Nuvio stream
+// providers that match "tt" IDs can recognize TamilFlix catalog entries.
+const imdbIdCache = new Map();
+
+function getImdbId(item, type) {
+  const mediaType = type === "movie" ? "movie" : "tv";
+  const cacheKey = `${mediaType}:${item.id}`;
+  if (!imdbIdCache.has(cacheKey)) {
+    const request = tmdb(`/${mediaType}/${item.id}/external_ids`)
+      .then((data) => data.imdb_id || null)
+      .catch((error) => {
+        console.warn(`Could not resolve IMDb ID for ${cacheKey}: ${error.message}`);
+        return null;
+      });
+    imdbIdCache.set(cacheKey, request);
+  }
+  return imdbIdCache.get(cacheKey);
+}
+
+async function mapWithConcurrency(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      results[index] = await mapper(items[index]);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+  );
+  return results;
+}
+
+async function toMeta(item, type) {
+  const imdbId = await getImdbId(item, type);
+  if (!imdbId || !/^tt\d+$/.test(imdbId)) {
+    console.warn(`Skipping ${type} TMDB ID ${item.id}: no valid IMDb ID for provider matching.`);
+    return null;
+  }
+
   const name = item.title || item.name || "Untitled";
   const release = item.release_date || item.first_air_date || "";
   const meta = {
-    id: `tamilflix_${type}_${item.id}`,
+    id: imdbId,
     type,
     name,
     poster: item.poster_path ? `${IMG}${item.poster_path}` : undefined,
@@ -85,9 +130,10 @@ for (const [type, ids] of [["movie", dubbed.movies || []], ["series", dubbed.ser
 const allMeta = new Map();
 for (const def of catalogDefs) {
   const unique = [...new Map(def.items.map(item => [item.id, item])).values()];
-  await writeJson(`catalog/${def.type}/${def.id}.json`, { metas: unique.map(item => toMeta(item, def.type)) });
-  for (const item of unique) {
-    const meta = toMeta(item, def.type);
+  const resolvedMetas = await mapWithConcurrency(unique, 4, (item) => toMeta(item, def.type));
+  const metas = resolvedMetas.filter(Boolean);
+  await writeJson(`catalog/${def.type}/${def.id}.json`, { metas });
+  for (const meta of metas) {
     allMeta.set(`${def.type}/${meta.id}`, meta);
   }
 }
