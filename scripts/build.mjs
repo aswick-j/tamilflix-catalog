@@ -75,8 +75,7 @@ function normalizeMdblistMovie(item) {
 
 async function fetchMdblistTamilMovies() {
   if (!MDBLIST_API_KEY) {
-    console.warn("MDBLIST_API_KEY is not configured. Skipping the MDBList source for this build.");
-    return [];
+    throw new Error("Missing MDBLIST_API_KEY GitHub Actions secret. Add it to the dev environment before building TamilFlix.");
   }
 
   const pageSize = 1000;
