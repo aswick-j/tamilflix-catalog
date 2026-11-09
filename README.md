@@ -2,7 +2,7 @@
 
 A static, catalog-only Stremio-protocol addon intended for compatible clients such as Nuvio. It lists Tamil-original movies and series, manually curated Tamil-dubbed titles, and a manually curated Tamil live-TV **directory**.
 
-**It does not provide video streams, torrent links, playback URLs, or copyrighted media.** Live TV entries are directory metadata only.
+**TamilFlix does not provide video streams, torrent links, playback URLs, or copyrighted media.** Playback for movies and series comes from separate, compatible stream addons or providers installed in Nuvio. Live TV entries are directory metadata only.
 
 ## Features
 
@@ -11,15 +11,21 @@ A static, catalog-only Stremio-protocol addon intended for compatible clients su
 - Popular Tamil series
 - Manually curated Tamil-dubbed movies and series using TMDB IDs
 - Tamil live-TV channel directory
+- IMDb IDs on movie and series catalog items so compatible providers can match the same title
 - Static JSON endpoints; no runtime server, database, or VPS
 - GitHub Actions refreshes the generated catalog daily
+
+## Important playback note
+
+TamilFlix is a catalog and metadata addon, not a stream provider. To play a movie or series, install and enable a compatible stream addon/provider in Nuvio as well. TamilFlix now resolves TMDB records to IMDb IDs (for example, `tt1234567`) to improve matching with providers that use IMDb IDs. Whether a stream is available still depends on the provider, its content coverage, and your Nuvio build.
+
+The live-TV catalog is a channel directory only. It does not contain channel stream URLs and cannot play live channels.
 
 ## Important limitations
 
 1. TMDB does not reliably identify every dubbed audio track. Add only titles you have verified are available with Tamil audio to `data/tamil-dubbed.json`.
-2. The live-TV catalog is a channel directory only. It contains no stream URLs or playback functionality.
+2. Titles without a valid IMDb ID are omitted from movie and series catalogs so they do not create entries that cannot be matched by IMDb-based stream providers.
 3. A TMDB API Read Access Token is required for catalog generation. It is used only by GitHub Actions and is not published in generated files.
-4. Nuvio may display channel cards, but resolving playback sources from other addons depends on Nuvio's channel-provider matching behavior and is not guaranteed by this catalog addon.
 
 ## Setup
 
@@ -51,8 +57,7 @@ The manifest URL for this repository is:
 2. In Nuvio, open **Settings → Addons** (or **Addons → Add Addon**, depending on app version).
 3. Paste the manifest URL and install.
 4. Refresh the catalog or Discover page.
-
-The addon declares catalog and metadata resources only; it does not declare a stream resource.
+5. Install/enable a separate compatible stream provider if you want playback.
 
 ## Add Tamil-dubbed titles
 
@@ -91,10 +96,11 @@ The GitHub Actions workflow runs daily and can also be started manually. After e
 
 ## Troubleshooting
 
+- **Titles appear but no streams:** Install and enable a compatible stream provider in Nuvio. TamilFlix itself has no stream endpoint.
+- **No provider matches TamilFlix titles:** Update to version 1.1.0 and refresh/reinstall TamilFlix so the catalog uses IMDb IDs.
 - **404 on manifest:** Check Pages is enabled with GitHub Actions and the workflow completed successfully.
 - **Build fails:** Check the Actions log for a missing/invalid `TMDB_READ_ACCESS_TOKEN` or TMDB API errors.
 - **Dubbed catalogs empty:** Add verified TMDB IDs to `data/tamil-dubbed.json`.
-- **Nuvio does not show the addon:** Confirm the HTTPS manifest URL returns JSON and your Nuvio version supports Stremio-protocol catalog addons.
 
 ## License and attribution
 
