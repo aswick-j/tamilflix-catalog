@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const TOKEN = process.env.TMDB_READ_ACCESS_TOKEN;
-const MDBLIST_API_KEY = process.env.MDBLIST_API_KEY;
+const TOKEN = (process.env.TMDB_READ_ACCESS_TOKEN || "").trim();
+const MDBLIST_API_KEY = (process.env.MDBLIST_API_KEY || "").trim();
 const MDBLIST_USER = "abinan97";
 const MDBLIST_SLUG = "tamil-movies-digital";
 const MDBLIST_LATEST_USER = "prasanaramanaa";
@@ -22,11 +22,23 @@ await fs.mkdir(OUT, { recursive: true });
 await fs.copyFile(path.join(ROOT, "manifest.json"), path.join(OUT, "manifest.json"));
 
 async function tmdb(endpoint) {
-  const response = await fetch(TMDB + endpoint, {
-    headers: { Authorization: "Bearer " + TOKEN, accept: "application/json" }
-  });
+  const url = new URL(TMDB + endpoint);
+  const headers = { accept: "application/json" };
+
+  // TMDB's Read Access Token is a JWT sent as a Bearer token.
+  // A legacy v3 API key is a plain string and must be sent as api_key.
+  if (TOKEN.includes(".")) {
+    headers.Authorization = "Bearer " + TOKEN;
+  } else if (TOKEN) {
+    url.searchParams.set("api_key", TOKEN);
+  } else {
+    throw new Error("Missing TMDB_READ_ACCESS_TOKEN GitHub Actions secret.");
+  }
+
+  const response = await fetch(url, { headers });
   if (!response.ok) {
-    throw new Error("TMDB " + response.status + " for " + endpoint + ": " + (await response.text()).slice(0, 300));
+    const detail = (await response.text()).slice(0, 300);
+    throw new Error("TMDB " + response.status + " for " + endpoint + ": " + detail);
   }
   return response.json();
 }
