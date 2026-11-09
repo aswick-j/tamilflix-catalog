@@ -37,7 +37,7 @@ In this repository, open **Settings → Environments → dev → Environment sec
 - \`TMDB_READ_ACCESS_TOKEN\` — your TMDB API Read Access Token
 - \`MDBLIST_API_KEY\` — your MDBList API key from [MDBList Preferences](https://mdblist.com/preferences)
 
-Do not paste either key into source code, commit it, or send it in chat. Both secrets are required for a complete TamilFlix build. The workflow will stop rather than silently publish a catalogue without the MDBList-curated source.
+Do not paste either key into source code, commit it, or send it in chat. Both secrets are required for a complete TamilFlix build. The TMDB secret can contain the Read Access Token (recommended) or the v3 API key; the build detects the format automatically. The workflow will stop rather than silently publish a catalogue without the MDBList-curated source.
 
 MDBList's free API tier currently allows 1,000 API requests per day. TamilFlix fetches the list in pages, so a normal build uses only a small number of MDBList requests.
 
