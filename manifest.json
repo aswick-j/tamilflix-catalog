@@ -1,6 +1,6 @@
 {
   "id": "community.tamilflix.catalog",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "name": "TamilFlix",
   "description": "Tamil-original and Tamil-dubbed catalogs. Tamil movies combine MDBList community curation with TMDB discovery; IMDb IDs are preferred with TMDB ID fallback.",
   "resources": ["catalog", "meta"],
@@ -8,7 +8,7 @@
   "catalogs": [
     {"type":"movie","id":"tamil_movies","name":"Tamil Movies"},
     {"type":"movie","id":"tamil_popular_movies","name":"Popular Tamil Movies"},
-    {"type":"movie","id":"tamil_latest_movies","name":"Latest Tamil Movies"},
+    {"type":"movie","id":"tamil_latest_movies","name":"Latest Tamil Releases"},
     {"type":"series","id":"tamil_series","name":"Tamil Series"},
     {"type":"series","id":"tamil_popular_series","name":"Popular Tamil Series"},
     {"type":"movie","id":"tamil_dubbed_movies","name":"Tamil Dubbed Movies"},
