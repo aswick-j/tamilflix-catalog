@@ -1,0 +1,8 @@
+{
+  "name": "tamilflix-catalog",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"build": "node scripts/build.mjs"},
+  "engines": {"node": ">=20"}
+}
