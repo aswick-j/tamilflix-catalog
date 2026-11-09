@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TamilFlix Catalog Addon</title>
+  <style>
+    body{font:16px system-ui,sans-serif;max-width:720px;margin:48px auto;padding:0 20px;line-height:1.6}
+    code{overflow-wrap:anywhere;background:#f2f2f2;padding:3px 6px;border-radius:4px}
+    a{color:#075ec8}
+  </style>
+</head>
+<body>
+  <h1>TamilFlix</h1>
+  <p>A Tamil-language catalog addon for compatible Stremio-protocol clients such as Nuvio.</p>
+  <p><strong>Catalogs:</strong> Tamil movies, Tamil series, manually curated Tamil-dubbed titles, and a Tamil live-TV channel directory.</p>
+  <p><strong>Catalog and metadata only.</strong> No video streams or live-TV playback links are provided.</p>
+  <p>Manifest: <a href="./manifest.json">manifest.json</a></p>
+  <p>Install this URL in Nuvio:</p>
+  <code id="url"></code>
+  <script>document.getElementById("url").textContent=location.origin+location.pathname.replace(/\/$/,"")+"/manifest.json";</script>
+  <p>Uses TMDB data. This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+</body>
+</html>
