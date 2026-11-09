@@ -7,7 +7,8 @@ A static, catalog-only Stremio-protocol addon intended for compatible clients su
 ## Features
 
 - Tamil movies combining the MDBList **Tamil Movies Digital** community list and TMDB Tamil-language discovery
-- Popular and recent Tamil movie catalogs from TMDB
+- Popular Tamil movie catalog from TMDB
+- Latest Tamil Releases: MDBList latest-release list merged with TMDB Tamil releases from the last 365 days, sorted newest release date first
 - Popular Tamil series from TMDB
 - Manually curated Tamil-dubbed movies and series using TMDB IDs
 - Tamil live-TV channel directory
@@ -19,7 +20,7 @@ A static, catalog-only Stremio-protocol addon intended for compatible clients su
 
 The main **Tamil Movies** catalog merges the public MDBList list [Tamil Movies Digital](https://mdblist.com/lists/abinan97/tamil-movies-digital) with TMDB's Tamil-original-language discovery results. MDBList items are kept in the curator's order, and duplicate titles are merged by TMDB ID (or IMDb ID if TMDB ID is unavailable). TMDB discovery fills gaps and adds metadata.
 
-The build reads the MDBList list by username and slug and follows its pagination headers. It does not publish your MDBList API key.
+The build reads both MDBList lists by username and slug and follows its pagination headers. The **Latest Tamil Releases** catalog combines [Latest Tamil Movie Release](https://mdblist.com/lists/prasanaramanaa/latest-tamil-movie-release) with TMDB Tamil-original-language releases from the last 365 days. Upcoming titles and items without full release dates are excluded, and results are sorted by exact release date descending (newest first). It does not publish your MDBList API key.
 
 ## Playback and ID compatibility
 
