@@ -5,6 +5,8 @@ const TOKEN = process.env.TMDB_READ_ACCESS_TOKEN;
 const MDBLIST_API_KEY = process.env.MDBLIST_API_KEY;
 const MDBLIST_USER = "abinan97";
 const MDBLIST_SLUG = "tamil-movies-digital";
+const MDBLIST_LATEST_USER = "prasanaramanaa";
+const MDBLIST_LATEST_SLUG = "latest-tamil-movie-release";
 
 if (!TOKEN) throw new Error("Missing TMDB_READ_ACCESS_TOKEN GitHub Actions secret.");
 
@@ -73,7 +75,7 @@ function normalizeMdblistMovie(item) {
   };
 }
 
-async function fetchMdblistTamilMovies() {
+async function fetchMdblistMovies(username, slug, listLabel) {
   if (!MDBLIST_API_KEY) {
     throw new Error("Missing MDBLIST_API_KEY GitHub Actions secret. Add it to the dev environment before building TamilFlix.");
   }
@@ -89,8 +91,8 @@ async function fetchMdblistTamilMovies() {
     if (pageNumber > 20) throw new Error("MDBList pagination exceeded the safety limit.");
 
     const url = new URL(
-      MDBLIST + "/lists/" + encodeURIComponent(MDBLIST_USER) + "/" +
-      encodeURIComponent(MDBLIST_SLUG) + "/items/movie/"
+      MDBLIST + "/lists/" + encodeURIComponent(username) + "/" +
+      encodeURIComponent(slug) + "/items/movie/"
     );
     url.searchParams.set("apikey", MDBLIST_API_KEY);
     url.searchParams.set("limit", String(pageSize));
@@ -103,7 +105,7 @@ async function fetchMdblistTamilMovies() {
 
     if (!response.ok) {
       const details = (await response.text()).slice(0, 300);
-      throw new Error("MDBList returned HTTP " + response.status + " while reading the Tamil Movies Digital list: " + details);
+      throw new Error("MDBList returned HTTP " + response.status + " while reading " + listLabel + ": " + details);
     }
 
     const payload = await response.json();
@@ -133,7 +135,7 @@ async function fetchMdblistTamilMovies() {
 
   const normalized = allItems.map(normalizeMdblistMovie).filter(Boolean);
   console.log(
-    "MDBList source: fetched " + allItems.length + " records, retained " +
+    "MDBList source (" + listLabel + "): fetched " + allItems.length + " records, retained " +
     normalized.length + " records with a usable TMDB or IMDb ID."
   );
   return normalized;
@@ -208,7 +210,7 @@ async function toMeta(item, type) {
     poster,
     background,
     description: item.overview || item.description || "",
-    releaseInfo: release ? String(release).slice(0, 4) : undefined
+    releaseInfo: release ? String(release).slice(0, 10) : undefined
   };
   return Object.fromEntries(Object.entries(meta).filter(([, value]) => value !== undefined));
 }
@@ -277,8 +279,48 @@ const discoveredTamilMovies = await discover("movie", {
   with_original_language: "ta",
   sort_by: "popularity.desc"
 }, 3);
-const mdblistTamilMovies = await fetchMdblistTamilMovies();
+const mdblistTamilMovies = await fetchMdblistMovies(MDBLIST_USER, MDBLIST_SLUG, "Tamil Movies Digital");
 const mergedTamilMovies = mergeCatalogItems(mdblistTamilMovies, discoveredTamilMovies);
+
+const oneYearAgo = new Date();
+oneYearAgo.setUTCDate(oneYearAgo.getUTCDate() - 365);
+const releaseWindowStart = oneYearAgo.toISOString().slice(0, 10);
+const mdblistLatestTamilMovies = await fetchMdblistMovies(
+  MDBLIST_LATEST_USER,
+  MDBLIST_LATEST_SLUG,
+  "Latest Tamil Movie Release"
+);
+const tmdbLatestTamilMovies = await discover("movie", {
+  with_original_language: "ta",
+  sort_by: "primary_release_date.desc",
+  "primary_release_date.gte": releaseWindowStart,
+  "primary_release_date.lte": today
+}, 5);
+
+function releaseDateOf(item) {
+  const value = item.release_date || item.released || "";
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? String(value) : "";
+}
+
+const mergedLatestTamilMovies = mergeCatalogItems(
+  mdblistLatestTamilMovies,
+  tmdbLatestTamilMovies
+)
+  .filter((item) => {
+    const releaseDate = releaseDateOf(item);
+    return releaseDate && releaseDate <= today;
+  })
+  .sort((a, b) => {
+    const dateCompare = releaseDateOf(b).localeCompare(releaseDateOf(a));
+    if (dateCompare !== 0) return dateCompare;
+    return String(a.title || a.name || "").localeCompare(String(b.title || b.name || ""));
+  });
+
+console.log(
+  "Latest Tamil releases: " + mergedLatestTamilMovies.length +
+  " unique titles dated " + releaseWindowStart + " through " + today +
+  ", sorted newest release date first."
+);
 
 console.log(
   "Tamil movie catalog: " + mergedTamilMovies.length +
@@ -288,7 +330,7 @@ console.log(
 const catalogDefs = [
   { id: "tamil_movies", type: "movie", items: mergedTamilMovies },
   { id: "tamil_popular_movies", type: "movie", items: await discover("movie", { with_original_language: "ta", sort_by: "vote_count.desc", "vote_count.gte": 10 }, 2) },
-  { id: "tamil_latest_movies", type: "movie", items: await discover("movie", { with_original_language: "ta", sort_by: "primary_release_date.desc", "release_date.lte": today }, 2) },
+  { id: "tamil_latest_movies", type: "movie", items: mergedLatestTamilMovies },
   { id: "tamil_series", type: "series", items: await discover("tv", { with_original_language: "ta", sort_by: "popularity.desc" }, 3) },
   { id: "tamil_popular_series", type: "series", items: await discover("tv", { with_original_language: "ta", sort_by: "vote_count.desc", "vote_count.gte": 10 }, 2) }
 ];
