@@ -24,8 +24,9 @@ async function tmdb(endpoint) {
   return response.json();
 }
 
-// Resolve TMDB IDs to IMDb IDs so separately installed Stremio/Nuvio stream
-// providers that match "tt" IDs can recognize TamilFlix catalog entries.
+// Prefer IMDb IDs for broad provider compatibility. If TMDB has no IMDb
+// mapping, retain the title with its TMDB ID. MediaFusion supports both
+// "tt..." and "tmdb:..." IDs in its stream resource.
 const imdbIdCache = new Map();
 
 function getImdbId(item, type) {
@@ -62,16 +63,20 @@ async function mapWithConcurrency(items, concurrency, mapper) {
 }
 
 async function toMeta(item, type) {
-  const imdbId = await getImdbId(item, type);
-  if (!imdbId || !/^tt\d+$/.test(imdbId)) {
-    console.warn(`Skipping ${type} TMDB ID ${item.id}: no valid IMDb ID for provider matching.`);
-    return null;
+  const resolvedImdbId = await getImdbId(item, type);
+  const imdbId = resolvedImdbId && /^tt\\d+$/.test(resolvedImdbId)
+    ? resolvedImdbId
+    : null;
+  const id = imdbId || `tmdb:${item.id}`;
+
+  if (!imdbId) {
+    console.warn(`Using TMDB fallback ID for ${type} TMDB ID ${item.id}.`);
   }
 
   const name = item.title || item.name || "Untitled";
   const release = item.release_date || item.first_air_date || "";
   const meta = {
-    id: imdbId,
+    id,
     type,
     name,
     poster: item.poster_path ? `${IMG}${item.poster_path}` : undefined,
@@ -85,7 +90,7 @@ async function toMeta(item, type) {
 async function writeJson(relative, value) {
   const full = path.join(OUT, relative);
   await fs.mkdir(path.dirname(full), { recursive: true });
-  await fs.writeFile(full, JSON.stringify(value, null, 2) + "\n");
+  await fs.writeFile(full, JSON.stringify(value, null, 2) + "\\n");
 }
 
 async function discover(kind, params, pages = 2) {
