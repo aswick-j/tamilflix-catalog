@@ -1,0 +1,19 @@
+{
+  "id": "community.tamilflix.catalog",
+  "version": "1.0.0",
+  "name": "TamilFlix",
+  "description": "Tamil-original and Tamil-dubbed movies and series, plus a Tamil live-TV channel directory. Catalog and metadata only; no streams.",
+  "resources": ["catalog", "meta"],
+  "types": ["movie", "series", "channel"],
+  "catalogs": [
+    {"type":"movie","id":"tamil_movies","name":"Tamil Movies"},
+    {"type":"movie","id":"tamil_popular_movies","name":"Popular Tamil Movies"},
+    {"type":"movie","id":"tamil_latest_movies","name":"Latest Tamil Movies"},
+    {"type":"series","id":"tamil_series","name":"Tamil Series"},
+    {"type":"series","id":"tamil_popular_series","name":"Popular Tamil Series"},
+    {"type":"movie","id":"tamil_dubbed_movies","name":"Tamil Dubbed Movies"},
+    {"type":"series","id":"tamil_dubbed_series","name":"Tamil Dubbed Series"},
+    {"type":"channel","id":"tamil_live_tv","name":"Tamil Live TV"}
+  ],
+  "idPrefixes": ["tamilflix_"]
+}
